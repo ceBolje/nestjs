@@ -1,0 +1,25 @@
+version: '3'
+services:
+  nodejs:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${APP_PORT}:${APP_PORT}
+    volumes:
+      - ./static:/usr/src/app/static
+      - ./keys:/usr/src/app/keys
+      - ./logs:/usr/src/app/logs
+
+  postgres:
+    image: postgres:11.2-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: medium
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./run/postgresql/data:/var/lib/postgresql/data
+    restart: always

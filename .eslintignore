@@ -1,0 +1,20 @@
+# dependencies
+node_modules
+
+# testing
+coverage
+
+# mock
+mock
+
+# locales
+src/locales/*.json
+
+# production
+build
+lib
+esm
+es6
+public
+dist
+storybook-static
