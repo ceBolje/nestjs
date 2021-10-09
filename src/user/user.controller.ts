@@ -13,6 +13,8 @@ import { LoginUserDto } from './dto/loginUser.dto';
 import { UserService } from './user.service';
 import { Request } from 'express';
 import { ExpressRequestInterface } from 'src/types/expressRequest.interface';
+import { User } from './decorators/user.decarater';
+import { UserEntity } from './user.entity';
 
 @Controller()
 export class UserController {
@@ -37,9 +39,7 @@ export class UserController {
   }
 
   @Get('users')
-  async currentUser(
-    @Req() request: ExpressRequestInterface,
-  ): Promise<UserResponseInterface> {
-    return this.userService.buildUserResponse(request.user);
+  async currentUser(@User() user: UserEntity): Promise<UserResponseInterface> {
+    return this.userService.buildUserResponse(user);
   }
 }
