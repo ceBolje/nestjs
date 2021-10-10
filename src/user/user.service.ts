@@ -58,7 +58,10 @@ export class UserService {
     }
     const isMatch = await compare(loginUserDto.password, user.password);
     if (!isMatch) {
-      throw new HttpException('Wrong password', HttpStatus.NOT_ACCEPTABLE);
+      throw new HttpException(
+        'Wrong password',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
     }
 
     return await this.userRepository.save(user);
