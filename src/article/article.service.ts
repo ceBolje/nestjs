@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
 import { UserEntity } from 'src/user/user.entity';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { ArticleEntity } from './article.entity';
 import { CreateArticleDto } from './dto/createArticleDto';
 import { ArticleResponseInterface } from './types/articleResponse.type';
@@ -56,5 +56,47 @@ export class ArticleService {
     return `${slugify(title, {
       lower: true,
     })}-${uniq}`;
+  }
+
+  /**
+   *
+   * @param currentUserId
+   * @param slug
+   * @returns DeleteResult
+   */
+  async deleteArticle(
+    currentUserId: number,
+    slug: string,
+  ): Promise<DeleteResult> {
+    const article = await this.getArticleBySlug(slug);
+    if (!article) {
+      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (article.author.id !== currentUserId) {
+      throw new HttpException('Not allowed', HttpStatus.FORBIDDEN);
+    }
+
+    return this.articleRepository.delete({ slug });
+  }
+
+  async updateArticle(
+    currentUserId: number,
+    slug: string,
+    createArticleDto: CreateArticleDto,
+  ): Promise<ArticleEntity> {
+    const article = await this.getArticleBySlug(slug);
+    if (!article) {
+      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (article.author.id !== currentUserId) {
+      throw new HttpException('Not allowed', HttpStatus.FORBIDDEN);
+    }
+
+    Object.assign(article, createArticleDto);
+    article.slug = this.getSlug(article.title);
+
+    return await this.articleRepository.save(article);
   }
 }

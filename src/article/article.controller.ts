@@ -7,8 +7,11 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  Delete,
+  Put,
 } from '@nestjs/common';
 import { User } from 'src/user/decorators/user.decorator';
+import { CreateUserDto } from 'src/user/dto/createUser.dto';
 import { AuthGuard } from 'src/user/guards/auth.guard';
 import { UserEntity } from 'src/user/user.entity';
 import { ArticleService } from './article.service';
@@ -30,7 +33,7 @@ export class ArticleController {
   ): Promise<ArticleResponseInterface> {
     const article = await this.articleService.getArticleBySlug(slug);
     if (!article) {
-      throw new HttpException('Not founf', HttpStatus.NOT_FOUND);
+      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
     }
     return this.articleService.buildUserResponse(article);
   }
@@ -52,6 +55,30 @@ export class ArticleController {
       createArticleDto,
     );
 
+    return this.articleService.buildUserResponse(article);
+  }
+
+  @Delete(':slug')
+  @UseGuards(AuthGuard)
+  async deleteArticle(
+    @User('id') curentUserId: number,
+    @Param('slug') slug: string,
+  ) {
+    return await this.articleService.deleteArticle(curentUserId, slug);
+  }
+
+  @Put(':slug')
+  @UseGuards(AuthGuard)
+  async updateArticle(
+    @User('id') curentUserId: number,
+    @Param('slug') slug: string,
+    @Body('article') createArticleDto: CreateArticleDto,
+  ) {
+    const article = await this.articleService.updateArticle(
+      curentUserId,
+      slug,
+      createArticleDto,
+    );
     return this.articleService.buildUserResponse(article);
   }
 }
