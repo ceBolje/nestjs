@@ -10,5 +10,5 @@ export class CreateArticleDto {
   @IsNotEmpty()
   readonly body: string;
 
-  readonly tagList?: Array<string>;
+  readonly taglist?: Array<string>;
 }
