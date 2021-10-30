@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
 import { UserEntity } from 'src/user/user.entity';
-import { DeleteResult, getRepository, QueryBuilder, Repository } from 'typeorm';
+import { DeleteResult, getRepository, Repository } from 'typeorm';
 import { ArticleEntity } from './article.entity';
 import { CreateArticleDto } from './dto/createArticleDto';
 import { ArticleResponseInterface } from './types/articleResponse.interface';
@@ -36,7 +36,6 @@ export class ArticleService {
       .leftJoinAndSelect('articles.author', 'author');
 
     queryBuilder.orderBy('articles.createdAt', 'DESC');
-    const articlesCount = await queryBuilder.getCount();
 
     if (query.tag) {
       queryBuilder.andWhere('articles.taglist LIKE :tag', {
@@ -48,8 +47,21 @@ export class ArticleService {
       const author = await this.userRepository.findOne({
         username: query.author,
       });
-      console.log(author);
       queryBuilder.andWhere('articles.authorId = :id', { id: author.id });
+    }
+    if (query.favorited) {
+      const author = await this.userRepository.findOne(
+        { username: query.favorited },
+        { relations: ['favorites'] },
+      );
+
+      const ids = author.favorites.map((el) => el.id);
+
+      if (ids.length) {
+        queryBuilder.andWhere('articles.id IN (:...ids)', { ids: ids });
+      } else {
+        queryBuilder.andWhere('1=0');
+      }
     }
     if (query.limit) {
       queryBuilder.limit(query.limit);
@@ -57,9 +69,24 @@ export class ArticleService {
     if (query.offset) {
       queryBuilder.offset(query.offset);
     }
-    const articles = await queryBuilder.getMany();
 
-    return { articles, articlesCount };
+    const articles = await queryBuilder.getMany();
+    const articlesCount = await queryBuilder.getCount();
+    let favoritedIds: Array<number> = [];
+    if (currentUserId) {
+      const user = await this.userRepository.findOne(currentUserId, {
+        relations: ['favorites'],
+      });
+
+      favoritedIds = user.favorites.map((el) => el.id);
+    }
+
+    const artileWithFAvorites = articles.map((article) => {
+      const favorited = favoritedIds.includes(article.id);
+      return { ...article, favorited };
+    });
+
+    return { articles: artileWithFAvorites, articlesCount };
   }
 
   /**
@@ -142,5 +169,56 @@ export class ArticleService {
     article.slug = this.getSlug(article.title);
 
     return await this.articleRepository.save(article);
+  }
+
+  async addArticleToFavorite(
+    currentUserId: number,
+    slug: string,
+  ): Promise<ArticleEntity> {
+    const article = await this.getArticleBySlug(slug);
+    const user = await this.userRepository.findOne(currentUserId, {
+      relations: ['favorites'],
+    });
+    if (!article) {
+      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+    }
+    const isNotFavorite: boolean =
+      user.favorites.findIndex(
+        (articleInFavorites) => articleInFavorites.id === article.id,
+      ) === -1;
+
+    if (isNotFavorite) {
+      user.favorites.push(article);
+      article.favoriteCount++;
+      await this.userRepository.save(user);
+      await this.articleRepository.save(article);
+    }
+
+    return article;
+  }
+
+  async deleteArticleFromFavorite(
+    currentUserId: number,
+    slug: string,
+  ): Promise<ArticleEntity> {
+    const article = await this.getArticleBySlug(slug);
+    const user = await this.userRepository.findOne(currentUserId, {
+      relations: ['favorites'],
+    });
+    if (!article) {
+      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+    }
+    const articleIndex: number = user.favorites.findIndex(
+      (articleInFavorites) => articleInFavorites.id === article.id,
+    );
+
+    if (articleIndex >= 0) {
+      user.favorites.splice(articleIndex, 1);
+      article.favoriteCount--;
+      await this.userRepository.save(user);
+      await this.articleRepository.save(article);
+    }
+
+    return article;
   }
 }
