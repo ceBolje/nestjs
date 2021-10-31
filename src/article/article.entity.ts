@@ -32,7 +32,7 @@ export class ArticleEntity {
   'updatedAt': Date;
 
   @Column('simple-array')
-  taglist: string[];
+  tagList: string[];
 
   @Column({ default: 0 })
   favoriteCount: number;

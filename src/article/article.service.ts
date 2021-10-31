@@ -38,7 +38,7 @@ export class ArticleService {
     queryBuilder.orderBy('articles.createdAt', 'DESC');
 
     if (query.tag) {
-      queryBuilder.andWhere('articles.taglist LIKE :tag', {
+      queryBuilder.andWhere('articles.tagList LIKE :tag', {
         tag: `%${query.tag}%`,
       });
     }
@@ -102,7 +102,7 @@ export class ArticleService {
     const article = new ArticleEntity();
     Object.assign(article, createArticleDto);
 
-    article.taglist = article.taglist ?? [];
+    article.tagList = article.tagList ?? [];
     article.author = currentUser;
     article.slug = this.getSlug(article.title);
 
