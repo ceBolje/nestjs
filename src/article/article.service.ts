@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
+import { FollowEntity } from 'src/profile/follow.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { DeleteResult, getRepository, Repository } from 'typeorm';
 import { ArticleEntity } from './article.entity';
@@ -16,6 +17,9 @@ export class ArticleService {
 
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+
+    @InjectRepository(FollowEntity)
+    private readonly followRepository: Repository<FollowEntity>,
   ) {}
 
   /**
@@ -81,14 +85,51 @@ export class ArticleService {
       favoritedIds = user.favorites.map((el) => el.id);
     }
 
-    const artileWithFAvorites = articles.map((article) => {
+    const articleWithFAvorites = articles.map((article) => {
       const favorited = favoritedIds.includes(article.id);
       return { ...article, favorited };
     });
 
-    return { articles: artileWithFAvorites, articlesCount };
+    return { articles: articleWithFAvorites, articlesCount };
   }
 
+  async getFeed(
+    currentUserId: number,
+    query: any,
+  ): Promise<ArticlesResponseInterface> {
+    const follows = await this.followRepository.find({
+      followerId: currentUserId,
+    });
+
+    if (follows.length === 0) {
+      return { articles: [], articlesCount: 0 };
+    }
+
+    const followingUserIds: Array<number> = follows.map(
+      (follow) => follow.followingId,
+    );
+
+    const queryBuilder = getRepository(ArticleEntity)
+      .createQueryBuilder('articles')
+      .leftJoinAndSelect('articles.author', 'author')
+      .where('articles.authorId IN (:...ids)', { ids: followingUserIds });
+
+    queryBuilder.orderBy('articles.createdAt', 'DESC');
+
+    const articlesCount = await queryBuilder.getCount();
+
+    if (query.limit) {
+      queryBuilder.limit(query.limit);
+    }
+
+    if (query.offset) {
+      queryBuilder.offset(query.offset);
+    }
+
+    const articles = await queryBuilder.getMany();
+
+    return { articles, articlesCount };
+  }
   /**
    *
    * @param currentUser
