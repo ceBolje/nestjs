@@ -1,13 +1,5 @@
-import {
-  Body,
-  Controller,
-  Post,
-  ValidationPipe,
-  UsePipes,
-  Get,
-  UseGuards,
-  Put,
-} from '@nestjs/common';
+import { Body, Controller, Post, UsePipes, Get, UseGuards, Put } from '@nestjs/common';
+import { BackendValidationPipe } from 'src/shared/pipes';
 import { UserResponseInterface } from 'src/user/types/userResponse.interface';
 import { CreateUserDto } from './dto/createUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
@@ -21,41 +13,34 @@ import { UpdateUserDto } from './dto/updateUser.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post('user')
-  @UsePipes(new ValidationPipe())
-  async createUser(
-    @Body('user') createUserDto: CreateUserDto,
-  ): Promise<UserResponseInterface> {
+  @Post('users')
+  @UsePipes(new BackendValidationPipe())
+  async createUser(@Body('user') createUserDto: CreateUserDto): Promise<UserResponseInterface> {
     const user = await this.userService.createUser(createUserDto);
     return this.userService.buildUserResponse(user);
   }
 
-  @Post('user/login')
-  @UsePipes(new ValidationPipe())
-  async loginUser(
-    @Body('user') loginUserDto: LoginUserDto,
-  ): Promise<UserResponseInterface> {
+  @Post('users/login')
+  @UsePipes(new BackendValidationPipe())
+  async loginUser(@Body('user') loginUserDto: LoginUserDto): Promise<UserResponseInterface> {
     const user = await this.userService.loginUser(loginUserDto);
     return this.userService.buildUserResponse(user);
   }
 
-  @Get('user')
+  @Get('users')
   @UseGuards(AuthGuard)
   async currentUser(@User() user: UserEntity): Promise<UserResponseInterface> {
     return this.userService.buildUserResponse(user);
   }
 
-  @Put('user')
+  @Put('users')
   @UseGuards(AuthGuard)
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new BackendValidationPipe())
   async updateCurrentUser(
     @User('id') currentUserId: number,
     @Body('user') updateUserDto: UpdateUserDto,
   ): Promise<UserResponseInterface> {
-    const updatedUser = await this.userService.updateUser(
-      currentUserId,
-      updateUserDto,
-    );
+    const updatedUser = await this.userService.updateUser(currentUserId, updateUserDto);
     return this.userService.buildUserResponse(updatedUser);
   }
 }

@@ -31,10 +31,7 @@ export class ArticleService {
     return await this.articleRepository.findOne({ slug });
   }
 
-  async findAll(
-    currentUserId: number,
-    query,
-  ): Promise<ArticlesResponseInterface> {
+  async findAll(currentUserId: number, query): Promise<ArticlesResponseInterface> {
     const queryBuilder = getRepository(ArticleEntity)
       .createQueryBuilder('articles')
       .leftJoinAndSelect('articles.author', 'author');
@@ -93,10 +90,7 @@ export class ArticleService {
     return { articles: articleWithFAvorites, articlesCount };
   }
 
-  async getFeed(
-    currentUserId: number,
-    query: any,
-  ): Promise<ArticlesResponseInterface> {
+  async getFeed(currentUserId: number, query: any): Promise<ArticlesResponseInterface> {
     const follows = await this.followRepository.find({
       followerId: currentUserId,
     });
@@ -105,9 +99,7 @@ export class ArticleService {
       return { articles: [], articlesCount: 0 };
     }
 
-    const followingUserIds: Array<number> = follows.map(
-      (follow) => follow.followingId,
-    );
+    const followingUserIds: Array<number> = follows.map((follow) => follow.followingId);
 
     const queryBuilder = getRepository(ArticleEntity)
       .createQueryBuilder('articles')
@@ -176,10 +168,7 @@ export class ArticleService {
    * @param slug
    * @returns DeleteResult
    */
-  async deleteArticle(
-    currentUserId: number,
-    slug: string,
-  ): Promise<DeleteResult> {
+  async deleteArticle(currentUserId: number, slug: string): Promise<DeleteResult> {
     const article = await this.getArticleBySlug(slug);
     if (!article) {
       throw new HttpException('Not found', HttpStatus.NOT_FOUND);
@@ -212,10 +201,7 @@ export class ArticleService {
     return await this.articleRepository.save(article);
   }
 
-  async addArticleToFavorite(
-    currentUserId: number,
-    slug: string,
-  ): Promise<ArticleEntity> {
+  async addArticleToFavorite(currentUserId: number, slug: string): Promise<ArticleEntity> {
     const article = await this.getArticleBySlug(slug);
     const user = await this.userRepository.findOne(currentUserId, {
       relations: ['favorites'],
@@ -224,9 +210,7 @@ export class ArticleService {
       throw new HttpException('Not found', HttpStatus.NOT_FOUND);
     }
     const isNotFavorite: boolean =
-      user.favorites.findIndex(
-        (articleInFavorites) => articleInFavorites.id === article.id,
-      ) === -1;
+      user.favorites.findIndex((articleInFavorites) => articleInFavorites.id === article.id) === -1;
 
     if (isNotFavorite) {
       user.favorites.push(article);
@@ -238,10 +222,7 @@ export class ArticleService {
     return article;
   }
 
-  async deleteArticleFromFavorite(
-    currentUserId: number,
-    slug: string,
-  ): Promise<ArticleEntity> {
+  async deleteArticleFromFavorite(currentUserId: number, slug: string): Promise<ArticleEntity> {
     const article = await this.getArticleBySlug(slug);
     const user = await this.userRepository.findOne(currentUserId, {
       relations: ['favorites'],

@@ -23,6 +23,7 @@ export class UserService {
    * @returns
    */
   async createUser(createUserDto: CreateUserDto): Promise<UserEntity> {
+    const errorResponse = { errors: {} };
     const userByEmail = await this.userRepository.findOne({
       email: createUserDto.email,
     });
@@ -30,11 +31,15 @@ export class UserService {
       username: createUserDto.username,
     });
 
+    if (userByEmail) {
+      errorResponse.errors['email'] = 'Email are taken';
+    }
+
+    if (userByUsername) {
+      errorResponse.errors['username'] = 'Username are taken';
+    }
     if (userByEmail || userByUsername) {
-      throw new HttpException(
-        'Email or username are taken',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     const newUser = new UserEntity();
@@ -48,21 +53,20 @@ export class UserService {
    * @returns
    */
   async loginUser(loginUserDto: LoginUserDto): Promise<UserEntity> {
+    const errorResponse = {
+      errors: {
+        'email or password': 'are invalid',
+      },
+    };
     const user = await this.userRepository.findOne({
       email: loginUserDto.email,
     });
     if (!user) {
-      throw new HttpException(
-        'User with email not found',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException(errorResponse, HttpStatus.NOT_FOUND);
     }
     const isMatch = await compare(loginUserDto.password, user.password);
     if (!isMatch) {
-      throw new HttpException(
-        'Wrong password',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     return await this.userRepository.save(user);
@@ -74,10 +78,7 @@ export class UserService {
    * @param updateUserDto
    * @returns
    */
-  async updateUser(
-    userId: number,
-    updateUserDto: UpdateUserDto,
-  ): Promise<UserEntity> {
+  async updateUser(userId: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
     const user = await this.findUserById(userId);
     Object.assign(user, updateUserDto);
     return await this.userRepository.save(user);
